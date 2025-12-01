@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { PAYROLL_MANAGER_ADDRESS, PAYROLL_MANAGER_ABI, USDC_ADDRESS, EURC_ADDRESS } from '@/lib/contracts';
@@ -16,6 +17,11 @@ type PaymentRecord = {
 
 export default function MePage() {
   const { address, isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: payments } = useReadContract({
     address: PAYROLL_MANAGER_ADDRESS as `0x${string}`,
@@ -24,6 +30,18 @@ export default function MePage() {
     args: address ? [address] : undefined,
     query: { enabled: !!address && !!PAYROLL_MANAGER_ADDRESS },
   });
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center p-12">
+            <p className="text-lg">Loading...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!isConnected) {
     return (

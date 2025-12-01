@@ -26,6 +26,11 @@ export default function CompanyDetailPage() {
   const params = useParams();
   const companyId = params.id as string;
   const { address, isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const [employeeWallet, setEmployeeWallet] = useState('');
   const [basePay, setBasePay] = useState('');
@@ -105,6 +110,18 @@ export default function CompanyDetailPage() {
       args: [PAYROLL_MANAGER_ADDRESS as `0x${string}`, totalAmount],
     });
   };
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center p-12">
+            <p className="text-lg">Loading...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!isConnected) {
     return (

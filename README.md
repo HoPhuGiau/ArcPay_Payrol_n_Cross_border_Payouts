@@ -47,6 +47,18 @@ Employees can:
 
 ## 🚀 Quick Start
 
+> 📖 **Xem hướng dẫn chi tiết từng bước**: [SETUP.md](./SETUP.md) (tiếng Việt)  
+> ⚡ **Hướng dẫn nhanh**: [QUICKSTART.md](./QUICKSTART.md)
+
+### Windows PowerShell (Dễ nhất):
+```powershell
+# Deploy contracts
+.\deploy.ps1
+
+# Start frontend (sau khi deploy)
+.\start-frontend.ps1
+```
+
 ### 1. Clone and Setup
 
 ```bash

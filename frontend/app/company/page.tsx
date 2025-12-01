@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { COMPANY_REGISTRY_ADDRESS, COMPANY_REGISTRY_ABI } from '@/lib/contracts';
-import { parseEther, formatEther } from 'viem';
 
 export default function CompanyPage() {
   const { address, isConnected } = useAccount();
   const [companyName, setCompanyName] = useState('');
   const [metadataHash, setMetadataHash] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: hash, writeContract, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -30,7 +34,15 @@ export default function CompanyPage() {
     e.preventDefault();
     if (!address || !COMPANY_REGISTRY_ADDRESS) return;
 
-    const metadata = JSON.stringify({ name: companyName, createdAt: Date.now() });
+    // Use metadataHash if provided, otherwise create JSON from company name
+    let metadata = metadataHash.trim();
+    if (!metadata) {
+      metadata = JSON.stringify({ 
+        name: companyName, 
+        createdAt: Date.now(),
+        description: `Company registered on ArcPay`
+      });
+    }
     
     writeContract({
       address: COMPANY_REGISTRY_ADDRESS as `0x${string}`,
@@ -39,6 +51,18 @@ export default function CompanyPage() {
       args: [metadata],
     });
   };
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center p-12">
+            <p className="text-lg">Loading...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!isConnected) {
     return (
@@ -80,14 +104,20 @@ export default function CompanyPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Metadata Hash (optional)</label>
+                <label className="block text-sm font-medium mb-2">
+                  Metadata Hash (optional)
+                  <span className="text-xs text-gray-500 ml-2">Leave empty to auto-generate</span>
+                </label>
                 <input
                   type="text"
                   value={metadataHash}
                   onChange={(e) => setMetadataHash(e.target.value)}
                   className="w-full p-2 border rounded"
-                  placeholder="IPFS hash or JSON"
+                  placeholder="IPFS hash (Qm...) or JSON string"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  If empty, will auto-generate JSON from company name
+                </p>
               </div>
               <button
                 type="submit"

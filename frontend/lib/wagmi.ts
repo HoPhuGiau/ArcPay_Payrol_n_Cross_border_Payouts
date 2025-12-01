@@ -25,10 +25,10 @@ const arcChain = {
 } as const;
 
 export const config = getDefaultConfig({
-  appName: 'ArcPay - Payroll & Cross-border Payouts',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
+  appName: 'ArcPay',
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '00000000000000000000000000000000',
   chains: [arcChain],
-  ssr: true,
+  ssr: false,
   transports: {
     [arcChain.id]: http(),
   },
