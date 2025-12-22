@@ -89,10 +89,10 @@ contract PayrollManagerTest is Test {
         vm.prank(companyOwner);
         uint256 batchId = payroll.createPayrollBatch(companyId, 202501, address(usdc));
 
-        PayrollManager.PayrollBatch memory batch = payroll.payrollBatches(batchId);
-        assertEq(batch.totalAmount, 3000 * 10**6);
-        assertEq(batch.employeeCount, 2);
-        assertFalse(batch.executed);
+        (,,, uint256 totalAmount, bool executed,, uint256 employeeCount) = payroll.payrollBatches(batchId);
+        assertEq(totalAmount, 3000 * 10**6);
+        assertEq(employeeCount, 2);
+        assertFalse(executed);
     }
 
     function testExecutePayroll() public {
@@ -114,8 +114,8 @@ contract PayrollManagerTest is Test {
         // Verify payment
         assertEq(usdc.balanceOf(employee1), 1000 * 10**6);
         
-        PayrollManager.PayrollBatch memory batch = payroll.payrollBatches(batchId);
-        assertTrue(batch.executed);
+        (,,,, bool executed,,) = payroll.payrollBatches(batchId);
+        assertTrue(executed);
     }
 }
 

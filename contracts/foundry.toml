@@ -10,6 +10,6 @@ via_ir = false
 [rpc_endpoints]
 arc_testnet = "https://rpc.testnet.arc.network"
 
-[etherscan]
-arc_testnet = { api_url = "https://api-testnet.arcscan.app/api", api_key = "${ARCSCAN_API_KEY}" }
+# [etherscan]
+# arc_testnet = { api_url = "https://api-testnet.arcscan.app/api", api_key = "${ARCSCAN_API_KEY}" }
 

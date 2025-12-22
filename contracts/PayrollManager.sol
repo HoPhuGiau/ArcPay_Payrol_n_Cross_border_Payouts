@@ -8,15 +8,9 @@ import "./CompanyRegistry.sol";
  * @notice Manages employee payroll and batch payments on Arc using USDC/EURC
  * @dev Handles employee management, payroll batch creation, and onchain salary payments
  */
+import "./IERC20.sol";
+
 contract PayrollManager {
-    // Import IERC20 interface
-    interface IERC20 {
-        function transferFrom(address from, address to, uint256 amount) external returns (bool);
-        function transfer(address to, uint256 amount) external returns (bool);
-        function balanceOf(address account) external view returns (uint256);
-        function allowance(address owner, address spender) external view returns (uint256);
-        function approve(address spender, uint256 amount) external returns (bool);
-    }
 
     // Token addresses from arcusdc.txt
     address public constant USDC = 0x3600000000000000000000000000000000000000;
