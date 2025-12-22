@@ -3,9 +3,12 @@
 import * as React from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseAbi } from 'viem';
+import toast from 'react-hot-toast';
 import { COMPANY_REGISTRY_ADDRESS, PAYROLL_MANAGER_ADDRESS, USDC_ADDRESS, EURC_ADDRESS } from '@/constants';
 import CompanyRegistryABI from '@/abis/CompanyRegistry.json';
 import PayrollManagerABI from '@/abis/PayrollManager.json';
+
+const ARCSCAN_URL = 'https://testnet.arcscan.io';
 
 const ERC20_ABI = parseAbi([
     'function approve(address spender, uint256 amount) external returns (bool)',
@@ -56,7 +59,7 @@ const BatchRow = ({
             <td className="py-4 px-4">
                 <div className="flex flex-col">
                     <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                        {(Number(totalAmount) / 1000000).toLocaleString()}{' '}
+                        ${(Number(totalAmount) / 1000000).toLocaleString()}{' '}
                         <span className="text-xs text-zinc-500">{isUSDC ? 'USDC' : 'EURC'}</span>
                     </span>
                 </div>
@@ -67,7 +70,7 @@ const BatchRow = ({
                         ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
                         : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
                     }`}>
-                    {executed ? 'Paid' : 'Pending'}
+                    {executed ? '✓ Paid' : '⏳ Pending'}
                 </span>
             </td>
             <td className="py-4 px-4">
@@ -77,16 +80,16 @@ const BatchRow = ({
                             <button
                                 onClick={() => onApprove(token, totalAmount)}
                                 disabled={isApproving}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 transition-colors"
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 transition-colors disabled:opacity-50"
                             >
-                                {isApproving ? '...' : 'Approve'}
+                                {isApproving ? '...' : '1. Approve'}
                             </button>
                             <button
                                 onClick={() => onExecute(id)}
                                 disabled={isExecuting}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-500/20 transition-all"
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white shadow-sm shadow-violet-500/20 transition-all disabled:opacity-50"
                             >
-                                {isExecuting ? 'Paying...' : 'Pay Now'}
+                                {isExecuting ? '...' : '2. Pay Now'}
                             </button>
                         </>
                     ) : (
@@ -127,20 +130,82 @@ export function PayrollBatches() {
         query: { enabled: true }
     });
 
-    const { data: createHash, isPending: isCreating, writeContract: createBatch, reset: resetCreate } = useWriteContract();
+    const { data: createHash, isPending: isCreating, writeContract: createBatch, reset: resetCreate, error: createError } = useWriteContract();
     const { isSuccess: isCreated } = useWaitForTransactionReceipt({ hash: createHash });
 
-    const { data: execHash, isPending: isExecuting, writeContract: executeBatch, reset: resetExec } = useWriteContract();
+    const { data: execHash, isPending: isExecuting, writeContract: executeBatch, reset: resetExec, error: execError } = useWriteContract();
     const { isSuccess: isExecuted } = useWaitForTransactionReceipt({ hash: execHash });
 
-    const { data: approveHash, isPending: isApproving, writeContract: approveToken, reset: resetApprove } = useWriteContract();
+    const { data: approveHash, isPending: isApproving, writeContract: approveToken, reset: resetApprove, error: approveError } = useWriteContract();
     const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
 
+    // Toast notifications for Create
     React.useEffect(() => {
-        if (isCreated) { refetchCount(); resetCreate(); }
-        if (isExecuted) { refetchCount(); resetExec(); }
-        if (isApproved) { refetchCount(); resetApprove(); }
-    }, [isCreated, isExecuted, isApproved, refetchCount, resetCreate, resetExec, resetApprove]);
+        if (createHash) toast.loading('Creating payroll batch...', { id: 'create-batch' });
+    }, [createHash]);
+
+    React.useEffect(() => {
+        if (isCreated) {
+            toast.dismiss('create-batch');
+            toast.success(
+                <div>
+                    <p className="font-medium">Payroll Batch Created! 📋</p>
+                    <a href={`${ARCSCAN_URL}/tx/${createHash}`} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline text-sm">
+                        View on ArcScan →
+                    </a>
+                </div>
+            );
+            refetchCount();
+            resetCreate();
+        }
+    }, [isCreated, createHash, refetchCount, resetCreate]);
+
+    React.useEffect(() => {
+        if (createError) { toast.dismiss('create-batch'); toast.error('Failed to create batch'); }
+    }, [createError]);
+
+    // Toast for Approve
+    React.useEffect(() => {
+        if (approveHash) toast.loading('Approving tokens...', { id: 'approve-token' });
+    }, [approveHash]);
+
+    React.useEffect(() => {
+        if (isApproved) {
+            toast.dismiss('approve-token');
+            toast.success('Tokens Approved! ✓ Now click "Pay Now"');
+            resetApprove();
+        }
+    }, [isApproved, resetApprove]);
+
+    React.useEffect(() => {
+        if (approveError) { toast.dismiss('approve-token'); toast.error('Approval failed'); }
+    }, [approveError]);
+
+    // Toast for Execute
+    React.useEffect(() => {
+        if (execHash) toast.loading('Executing payroll...', { id: 'exec-payroll' });
+    }, [execHash]);
+
+    React.useEffect(() => {
+        if (isExecuted) {
+            toast.dismiss('exec-payroll');
+            toast.success(
+                <div>
+                    <p className="font-medium">Payroll Executed! 💰</p>
+                    <a href={`${ARCSCAN_URL}/tx/${execHash}`} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline text-sm">
+                        View on ArcScan →
+                    </a>
+                </div>,
+                { duration: 8000 }
+            );
+            refetchCount();
+            resetExec();
+        }
+    }, [isExecuted, execHash, refetchCount, resetExec]);
+
+    React.useEffect(() => {
+        if (execError) { toast.dismiss('exec-payroll'); toast.error('Payroll execution failed'); }
+    }, [execError]);
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -188,7 +253,7 @@ export function PayrollBatches() {
             <div className={`transition-opacity duration-300 ${isLocked ? 'opacity-40 pointer-events-none select-none' : 'opacity-100'}`}>
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-xl font-bold dark:text-white">Payroll History</h2>
+                        <h2 className="text-xl font-bold dark:text-white">Payroll Batches</h2>
                         <p className="text-sm text-zinc-500 dark:text-zinc-400">Execute and track salary payments</p>
                     </div>
                     <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg">
@@ -196,6 +261,16 @@ export function PayrollBatches() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
+                </div>
+
+                {/* How it works */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                    <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">💡 How Payroll Works</h3>
+                    <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
+                        <li><span className="font-medium text-zinc-900 dark:text-white">1.</span> Create a payroll batch for the period</li>
+                        <li><span className="font-medium text-zinc-900 dark:text-white">2.</span> Approve tokens for the contract to spend</li>
+                        <li><span className="font-medium text-zinc-900 dark:text-white">3.</span> Execute to pay all employees in one transaction</li>
+                    </ol>
                 </div>
 
                 {/* Create Batch Form */}
@@ -208,13 +283,13 @@ export function PayrollBatches() {
                     </h3>
                     <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                         <div className="md:col-span-5">
-                            <label className="block text-xs font-medium mb-1.5 text-zinc-500 uppercase tracking-wider">Period</label>
+                            <label className="block text-xs font-medium mb-1.5 text-zinc-500 uppercase tracking-wider">Period (YYYYMM)</label>
                             <input
                                 type="number"
                                 value={newBatch.period}
                                 onChange={(e) => setNewBatch({ ...newBatch, period: parseInt(e.target.value) })}
                                 className="input-field text-sm"
-                                placeholder="YYYYMM"
+                                placeholder="202512"
                             />
                         </div>
                         <div className="md:col-span-5">
@@ -232,9 +307,13 @@ export function PayrollBatches() {
                             <button
                                 type="submit"
                                 disabled={isCreating}
-                                className="btn-primary w-full text-sm h-[42px]"
+                                className="btn-primary w-full text-sm h-[42px] flex items-center justify-center gap-2"
                             >
-                                {isCreating ? 'Creating...' : 'Create Run'}
+                                {isCreating ? (
+                                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                                ) : (
+                                    'Create'
+                                )}
                             </button>
                         </div>
                     </form>
@@ -256,8 +335,18 @@ export function PayrollBatches() {
                         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                             {isLocked || !batchCount || Number(batchCount) === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="py-8 text-center text-zinc-500">
-                                        No payroll runs found
+                                    <td colSpan={6} className="py-12 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                                <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-zinc-700 dark:text-zinc-300">No payroll runs yet</p>
+                                                <p className="text-sm text-zinc-500">Create your first batch above</p>
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
