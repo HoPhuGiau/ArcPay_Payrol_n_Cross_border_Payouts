@@ -1,9 +1,24 @@
 'use client';
 
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount, useBalance } from 'wagmi';
+import { USDC_ADDRESS } from '@/constants';
 
 export function Navbar() {
+    const [mounted, setMounted] = useState(false);
+    const { address, isConnected } = useAccount();
+
+    const { data: usdcBalance } = useBalance({
+        address: address,
+        token: USDC_ADDRESS as `0x${string}`,
+        query: { enabled: !!address }
+    });
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <nav className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -18,100 +33,39 @@ export function Navbar() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <ConnectButton.Custom>
-                            {({
-                                account,
-                                chain,
-                                openAccountModal,
-                                openChainModal,
-                                openConnectModal,
-                                authenticationStatus,
-                                mounted,
-                            }) => {
-                                const ready = mounted && authenticationStatus !== 'loading';
-                                const connected =
-                                    ready &&
-                                    account &&
-                                    chain &&
-                                    (!authenticationStatus ||
-                                        authenticationStatus === 'authenticated');
+                        {/* Faucet Link */}
+                        <a
+                            href="https://faucet.circle.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Get Test USDC
+                        </a>
 
-                                return (
-                                    <div
-                                        {...(!ready && {
-                                            'aria-hidden': true,
-                                            'style': {
-                                                opacity: 0,
-                                                pointerEvents: 'none',
-                                                userSelect: 'none',
-                                            },
-                                        })}
-                                    >
-                                        {(() => {
-                                            if (!connected) {
-                                                return (
-                                                    <button
-                                                        onClick={openConnectModal}
-                                                        type="button"
-                                                        className="btn-primary"
-                                                    >
-                                                        Connect Wallet
-                                                    </button>
-                                                );
-                                            }
+                        {/* USDC Balance */}
+                        {mounted && isConnected && usdcBalance && (
+                            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                                <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">$</span>
+                                </div>
+                                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                    {parseFloat(usdcBalance.formatted).toFixed(2)} USDC
+                                </span>
+                            </div>
+                        )}
 
-                                            if (chain.unsupported) {
-                                                return (
-                                                    <button onClick={openChainModal} type="button" className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                                                        Wrong network
-                                                    </button>
-                                                );
-                                            }
-
-                                            return (
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        onClick={openChainModal}
-                                                        style={{ display: 'flex', alignItems: 'center' }}
-                                                        type="button"
-                                                        className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium py-2 px-3 rounded-lg transition-colors border border-zinc-200 dark:border-zinc-700"
-                                                    >
-                                                        {chain.hasIcon && (
-                                                            <div
-                                                                style={{
-                                                                    background: chain.iconBackground,
-                                                                    width: 20,
-                                                                    height: 20,
-                                                                    borderRadius: 999,
-                                                                    overflow: 'hidden',
-                                                                    marginRight: 8,
-                                                                }}
-                                                            >
-                                                                {chain.iconUrl && (
-                                                                    <img
-                                                                        alt={chain.name ?? 'Chain icon'}
-                                                                        src={chain.iconUrl}
-                                                                        style={{ width: 20, height: 20 }}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                        {chain.name}
-                                                    </button>
-
-                                                    <button onClick={openAccountModal} type="button" className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium py-2 px-3 rounded-lg transition-colors border border-zinc-200 dark:border-zinc-700">
-                                                        {account.displayName}
-                                                        {account.displayBalance
-                                                            ? ` (${account.displayBalance})`
-                                                            : ''}
-                                                    </button>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                );
-                            }}
-                        </ConnectButton.Custom>
+                        {/* Connect Button */}
+                        {mounted ? (
+                            <ConnectButton />
+                        ) : (
+                            <button className="bg-violet-600 text-white font-medium py-2 px-4 rounded-lg opacity-50">
+                                Connect Wallet
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

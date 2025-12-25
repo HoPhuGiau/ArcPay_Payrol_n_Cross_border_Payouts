@@ -9,13 +9,13 @@ export const arcTestnet = defineChain({
         default: { http: ['https://rpc.testnet.arc.network'] },
     },
     blockExplorers: {
-        default: { name: 'ArcScan', url: 'https://testnet.arcscan.io' }, // Assuming URL
+        default: { name: 'ArcScan', url: 'https://testnet.arcscan.io' },
     },
 });
 
 export const config = getDefaultConfig({
     appName: 'Arc Payroll',
-    projectId: '3a8170812b534d0ff9d794f19a901d64', // Testing ID. Get a real one at cloud.walletconnect.com
+    projectId: '3a8170812b534d0ff9d794f19a901d64', // WalletConnect Project ID
     chains: [arcTestnet],
-    ssr: true, // If your dApp uses server side rendering (SSR)
+    ssr: true,
 });
